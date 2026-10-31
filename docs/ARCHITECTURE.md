@@ -115,7 +115,7 @@ Money is integer **paise**; weights integer **grams**; GST rates integer **basis
 
 - Sessions: HS256 JWT in `httpOnly`, `sameSite=lax`, `secure` (prod) cookie; `AUTH_SECRET` required in production. Passwords bcrypt (cost 10).
 - Authorization enforced **server-side in every action/page** (`requireAdmin`, `requireApprovedWholesale`, owner check on orders/invoices), middleware is only a first gate.
-- All inputs validated with zod; Prisma parameterises queries; raw SQL uses tagged templates only.
+- All inputs validated with zod; Drizzle parameterises every query; raw SQL fragments use tagged templates only.
 - Prices, tax and stock are **always recomputed on the server** at checkout — cart cookies carry only `{variantId, qty}`.
 - Razorpay: verify HMAC against the **server-stored** order id with `timingSafeEqual`; demo payment path disabled when `NODE_ENV=production` unless `PAYMENTS_DEMO=1`.
 - No card data stored. Marketing consent unticked by default (DPDP).
