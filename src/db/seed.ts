@@ -677,7 +677,7 @@ async function main() {
       paymentMethod: method,
       couponCode: coupon,
     });
-  const delhi = { name: "Priya Raman (gift)", phone: "9840012345", line1: "C-21, Defence Colony", city: "New Delhi", stateCode: "07", pincode: "110024" };
+  const delhi = { name: "Priya Raman (gift)", phone: "9840012345", line1: "C-21, Defence Colony", line2: "", city: "New Delhi", stateCode: "07", pincode: "110024" };
 
   const o1 = await retail([["CASHEWW240-500G", 2], ["ALMONDCALIFORNIA-1000G", 1]], "RAZORPAY");
   await recordOnlinePayment(o1.id, "pay_demo_seed01", "seed");

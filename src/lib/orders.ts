@@ -210,7 +210,7 @@ export async function addEvent(ex: Executor, orderId: string, type: string, mess
 
 async function outstandingCreditPaise(tx: Tx, companyId: string) {
   const [r] = await tx
-    .select({ due: sql<number>`coalesce(sum(${orders.totalPaise}), 0)::int` })
+    .select({ due: sql<number>`coalesce(sum(${orders.totalPaise}), 0)::float8` })
     .from(orders)
     .where(and(eq(orders.companyId, companyId), eq(orders.paymentMethod, "NET_TERMS"), eq(orders.paymentStatus, "PENDING"), inArray(orders.status, ["OPEN"])));
   return r.due;

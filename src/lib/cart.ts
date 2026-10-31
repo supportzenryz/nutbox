@@ -33,3 +33,7 @@ export async function writeCart(channel: Channel, items: CartItem[]) {
 export async function clearCart(channel: Channel) {
   (await cookies()).delete(name(channel));
 }
+
+export async function readCoupon(channel: Channel) {
+  return (await cookies()).get(channel === "RETAIL" ? "nb_coupon" : "nb_coupon_wholesale")?.value ?? null;
+}

@@ -9,7 +9,7 @@
 **Essential complexity:** shared gram-denominated stock, concurrency-safe reservations, GST split by place of supply, FEFO lots for food shelf-life rules.
 **Accidental complexity we refuse:** microservices, a separate B2B app, a generic rules engine, multi-currency, multi-warehouse routing (schema-ready only).
 
-**Innovation tokens spent (max 3):** (1) gram-pool inventory with variant components. That's it. Everything else is boring: Next.js App Router, server actions, Prisma, PostgreSQL.
+**Innovation tokens spent (max 3):** (1) gram-pool inventory with variant components. That's it. Everything else is boring: Next.js App Router, server actions, Drizzle ORM, PostgreSQL.
 
 ## 1. System overview
 
@@ -29,7 +29,7 @@
                   │   gstin.ts     format + mod-36 checksum + state codes                        │
                   │   razorpay.ts  order create + HMAC verify (demo mode without keys)           │
                   └───────────────────────────────┬─────────────────────────────────────────────┘
-                                                  │ Prisma (+ raw SQL for row locks)
+                                                  │ Drizzle ORM (SELECT … FOR UPDATE)
                                           ┌───────▼────────┐
                                           │  PostgreSQL 16 │  CHECK (reserved <= on_hand), ledger
                                           └────────────────┘
@@ -105,7 +105,7 @@ Wholesale resolution (Shopify catalog semantics): best `PriceBreak` with `minQty
 ```
 Transitions are guarded with `updateMany({ where: { id, status: <expected> } })` so double-clicks and concurrent staff can't double-apply.
 
-## 6. Data model (Prisma, abridged)
+## 6. Data model (Drizzle, abridged — src/db/schema.ts)
 
 `User` (role CUSTOMER | STAFF | ADMIN, optional `companyId`) · `Company` (GSTIN, state, status PENDING/APPROVED/REJECTED/SUSPENDED, `priceListId`, payment terms, credit limit) · `Address` · `Category` · `Product` (variety, grade, origin, processing, HSN, GST bps, FSSAI facts) · `Variant` (pack size, channel flags, prices, MOQ/step) · `VariantComponent` (variant ↔ inventory item, `requiredQty`) · `InventoryItem` (GRAM | UNIT) · `Location` · `InventoryLevel` · `Lot` · `Reservation` · `StockMovement` · `PriceList` · `PriceBreak` · `Order` · `OrderLine` (price/tax snapshot) · `OrderEvent` (timeline) · `Coupon` · `Setting` (singleton) · `InvoiceCounter`.
 

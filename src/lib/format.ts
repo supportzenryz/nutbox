@@ -1,8 +1,8 @@
-const inr = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2, minimumFractionDigits: 0 });
+const inr = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 const inr2 = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 2 });
 
-/** ₹1,23,456 style; drops paise when whole. */
-export const rupees = (paise: number) => inr.format(paise / 100);
+/** ₹1,23,456 style; shows paise (two decimals) only when there are any. */
+export const rupees = (paise: number) => (paise % 100 === 0 ? inr.format(paise / 100) : inr2.format(paise / 100));
 /** Always two decimals — for invoices and tax lines. */
 export const rupees2 = (paise: number) => inr2.format(paise / 100);
 
