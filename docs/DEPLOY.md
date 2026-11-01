@@ -40,13 +40,9 @@ Needs the **Blaze** (pay-as-you-go) plan; App Hosting has a monthly no-cost allo
 
 1. console.firebase.google.com → create project `nutbox` → upgrade to Blaze.
 2. **Build → App Hosting → Get started**: connect GitHub, choose `supportzenryz/nutbox`, root directory `/`, live branch `main`, automatic rollouts **on**. Choose **asia-southeast1 (Singapore)** if offered — next to the Neon database — otherwise the nearest Asian region. Name the backend `nutbox`.
-3. Create the two secrets from a terminal with the Firebase CLI (`npm i -g firebase-tools && firebase login`):
-   ```bash
-   firebase use <your-project-id>
-   firebase apphosting:secrets:set nutbox-database-url   # paste the POOLED Neon string
-   firebase apphosting:secrets:set nutbox-auth-secret    # paste: openssl rand -hex 32
-   ```
-   Say **yes** when asked to grant the `nutbox` backend access. (If you skipped it: `firebase apphosting:secrets:grantaccess nutbox-database-url --backend nutbox`, same for `nutbox-auth-secret`.)
+3. Create the two secrets in **Google Cloud → Secret Manager** (or with `firebase apphosting:secrets:set`): `nutbox-database-url` = the **pooled** Neon string ending `sslmode=verify-full`, and `nutbox-auth-secret` = output of `openssl rand -hex 32`.
+   Then give the backend's service account **`firebase-app-hosting-compute@<project>.iam.gserviceaccount.com`** two roles **on those two secrets** (Secret Manager → tick both → Permissions → Add principal): **Secret Manager Secret Accessor** *and* **Secret Manager Viewer**. Accessor alone is not enough — resolving the `latest` version needs `secretmanager.versions.get`, which only Viewer has; without it the build fails at the *preparer* step with `fah/misconfigured-secret … Permission 'secretmanager.versions.get' denied`. (`firebase apphosting:secrets:grantaccess <secret> --backend nutbox` grants both.)
+   In **App Hosting → nutbox → Settings → Environment**, map `DATABASE_URL` → `nutbox-database-url` and `AUTH_SECRET` → `nutbox-auth-secret` (version `latest`).
 4. Trigger a rollout (push to `main`, or **Rollouts → Create rollout**). When it's live, open the `https://nutbox--<project>.<region>.hosted.app` URL, sign in at `/login` with the admin from step 2, and go to **Admin → Settings** to enter the real GSTIN, FSSAI licence, legal name, address and bank details.
 5. Receive opening stock lot by lot in **Admin → Inventory**.
 
