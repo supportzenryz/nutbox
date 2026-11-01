@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PayButton } from "@/components/pay-button";
 import { PAYMENT_METHOD_LABEL, Status } from "@/components/status";
+import { Flash } from "@/components/store-chrome";
+import { UpiPay } from "@/components/upi-pay";
 import { requireUser } from "@/lib/auth";
 import { dateIN, orderNo, rupees, rupees2, weight } from "@/lib/format";
 import { getOrderFull } from "@/lib/order-view";
@@ -10,22 +12,25 @@ import { stateName } from "@/lib/states";
 
 export const dynamic = "force-dynamic";
 
-export default async function OrderPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ placed?: string }> }) {
+export default async function OrderPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ placed?: string; error?: string; ok?: string }> }) {
   const [{ id }, sp] = await Promise.all([params, searchParams]);
   const u = await requireUser(`/account/orders/${id}`);
   const o = await getOrderFull(id);
   if (!o || o.userId !== u.id) notFound();
   const s = await getSettings();
-  const needsOnlinePay = o.status === "OPEN" && o.paymentStatus === "PENDING" && o.paymentMethod === "RAZORPAY";
+  const awaitingPay = o.status === "OPEN" && o.paymentStatus === "PENDING";
+  const needsOnlinePay = awaitingPay && o.paymentMethod === "RAZORPAY";
+  const needsUpi = awaitingPay && o.paymentMethod === "UPI";
   const wholesale = o.channel === "WHOLESALE";
 
   return (
     <div className="shell max-w-4xl py-8">
       <Link href="/account" className="text-sm text-muted hover:text-ink">All orders</Link>
-      {sp.placed && (
+      <div className="mt-4"><Flash sp={sp} /></div>
+      {sp.placed && !sp.ok && !sp.error && (
         <div role="status" className="mt-4 rounded border border-pista/20 bg-pista-soft p-4">
           <p className="font-semibold text-pista-deep">
-            {o.status === "QUOTE" ? "Quote request sent." : needsOnlinePay ? "Order created — complete payment to confirm it." : "Order placed. Thank you!"}
+            {o.status === "QUOTE" ? "Quote request sent." : needsOnlinePay || (needsUpi && !o.upiRef) ? "Order created — complete payment to confirm it." : "Order placed. Thank you!"}
           </p>
           <p className="mt-1 text-sm text-pista-deep/80">
             {o.status === "QUOTE"
@@ -44,10 +49,16 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
           </div>
         </div>
         <div className="flex flex-col items-end gap-2">
-          {needsOnlinePay && <PayButton orderId={o.id} label={`Pay ${rupees(o.totalPaise)}`} />}
+          {needsOnlinePay && <PayButton orderId={o.id} label={`Pay ${rupees(o.totalPaise)}`} upiOnly={!wholesale} />}
           {o.invoiceNo && <Link href={`/invoice/${o.id}`} className="btn-ghost btn-sm">Tax invoice {o.invoiceNo}</Link>}
         </div>
       </div>
+
+      {needsUpi && (s.upiId ? (
+        <UpiPay order={o} upiId={s.upiId} payeeName={s.upiPayeeName || s.storeName} />
+      ) : (
+        <p className="panel mt-6 p-4 text-sm">UPI payment details are being updated. Please contact {s.supportPhone} to pay for this order.</p>
+      ))}
 
       {wholesale && o.paymentMethod === "BANK_TRANSFER" && o.paymentStatus === "PENDING" && o.status === "OPEN" && (
         <div className="panel mt-6 p-4 text-sm">

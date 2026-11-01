@@ -27,7 +27,7 @@ export const paymentTermsEnum = pgEnum("payment_terms", ["PREPAID", "NET_7", "NE
 export const orderStatusEnum = pgEnum("order_status", ["QUOTE", "OPEN", "CANCELLED", "ARCHIVED"]);
 export const paymentStatusEnum = pgEnum("payment_status", ["PENDING", "PAID", "REFUNDED", "VOIDED"]);
 export const fulfillmentStatusEnum = pgEnum("fulfillment_status", ["UNFULFILLED", "SHIPPED", "DELIVERED", "RETURNED"]);
-export const paymentMethodEnum = pgEnum("payment_method", ["COD", "RAZORPAY", "BANK_TRANSFER", "NET_TERMS"]);
+export const paymentMethodEnum = pgEnum("payment_method", ["COD", "RAZORPAY", "BANK_TRANSFER", "NET_TERMS", "UPI"]);
 export const movementReasonEnum = pgEnum("movement_reason", [
   "RECEIPT",
   "RESERVE",
@@ -335,6 +335,9 @@ export const orders = pgTable(
     dueDate: timestamp("due_date", { withTimezone: true }),
     razorpayOrderId: text("razorpay_order_id").unique(),
     razorpayPaymentId: text("razorpay_payment_id"),
+    /** Direct UPI: the 12-digit UPI reference (UTR/RRN) the customer reported. Unique, so one payment can't settle two orders. */
+    upiRef: text("upi_ref").unique(),
+    paymentReportedAt: timestamp("payment_reported_at", { withTimezone: true }),
     invoiceNo: text("invoice_no").unique(),
     invoicedAt: timestamp("invoiced_at", { withTimezone: true }),
     courier: text("courier"),
@@ -415,6 +418,9 @@ export const settings = pgTable("settings", {
   wholesaleMinOrderPaise: integer("wholesale_min_order_paise").notNull().default(1000000),
   invoicePrefix: text("invoice_prefix").notNull().default("NB"),
   bankDetails: text("bank_details").notNull().default(""),
+  /** Business UPI ID (VPA) for direct UPI payments; empty = direct UPI off. */
+  upiId: text("upi_id").notNull().default(""),
+  upiPayeeName: text("upi_payee_name").notNull().default(""),
 });
 
 export const invoiceCounters = pgTable("invoice_counters", {

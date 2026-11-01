@@ -65,9 +65,13 @@ Needs the **Blaze** (pay-as-you-go) plan; App Hosting has a monthly no-cost allo
 7. Wait for Firebase to show the domain as **Connected** (minutes to a few hours; "DNS changes not yet detected" can be cached for ~30 min).
 8. If your domain changes, change `SERVER_ACTIONS_ALLOWED_ORIGINS` in `apphosting.yaml` and push.
 
-## 5. Payments (when ready)
+## 5. Payments
 
-Create the three Razorpay secrets (`nutbox-razorpay-key-id`, `nutbox-razorpay-key-secret`, `nutbox-razorpay-webhook-secret`) with `firebase apphosting:secrets:set`, uncomment the block at the bottom of `apphosting.yaml`, push, and in Razorpay → Webhooks add `https://nutbox.online/api/razorpay/webhook` for `payment.captured` and `order.paid`. Until then checkout offers cash on delivery only (demo payments are off in production).
+**Now — direct UPI (no gateway, no fee):** in **Admin → Settings → UPI payments** enter your business UPI ID and the name on that account. Retail checkout then offers **UPI**: on a phone the shopper taps *Pay* and their UPI apps open with amount and order number filled in (Android shows every UPI app; iPhone gets Google Pay / PhonePe / Paytm buttons); on a computer they scan a QR code. They then type the 12-digit UPI reference (UTR). You check that reference and amount in your bank or UPI business app and click **Record payment** (dashboard → *UPI payments to verify*). Orders can't ship until then; a reference can only be used on one order.
+
+Use a **merchant/business UPI ID** (PhonePe Business, Paytm for Business, Google Pay for Business, or your bank's merchant QR) linked to your current account — UPI apps often block or cap payments from websites to personal UPI IDs. Test with a ₹1 order on both Android and iPhone before announcing.
+
+**Later — a gateway (automatic confirmation):** create the three Razorpay secrets (`nutbox-razorpay-key-id`, `nutbox-razorpay-key-secret`, `nutbox-razorpay-webhook-secret`) with `firebase apphosting:secrets:set`, uncomment the block at the bottom of `apphosting.yaml`, push, and in Razorpay → Webhooks add `https://nutbox.online/api/razorpay/webhook` for `payment.captured` and `order.paid`. Retail checkout switches to Razorpay automatically, showing **UPI only**; wholesale keeps all methods (UPI caps most payments at ₹1 lakh). Orders already placed with direct UPI still show the UPI QR. Without either, checkout offers cash on delivery only.
 
 ## Checks after go-live
 

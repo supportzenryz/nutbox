@@ -99,7 +99,8 @@ Wholesale resolution (Shopify catalog semantics): best `PriceBreak` with `minQty
  status:       QUOTE ──approve──▶ OPEN ──archive──▶ ARCHIVED
                  │                 │
                  └──decline──▶ CANCELLED ◀──cancel (if unshipped)──┘
- payment:      PENDING ─▶ PAID ─▶ REFUNDED        (COD / net terms / bank stay PENDING until marked)
+ payment:      PENDING ─▶ PAID ─▶ REFUNDED        (COD / net terms / bank / direct UPI stay PENDING until staff mark them)
+               direct UPI: shopper reports UTR (unique per order) ─▶ staff verify in bank app ─▶ Record payment
  fulfillment:  UNFULFILLED ─ship─▶ SHIPPED ─▶ DELIVERED
                                        └──return (RTO)──▶ RETURNED (restock to original lots)
 ```

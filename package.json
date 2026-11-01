@@ -2,7 +2,7 @@
   "name": "nutbox",
   "version": "0.1.0",
   "private": true,
-  "description": "Nutbox \u2014 Shopify-style commerce for nuts & dry fruits in India: retail store + wholesale portal on one shared inventory, with admin.",
+  "description": "Nutbox — Shopify-style commerce for nuts & dry fruits in India: retail store + wholesale portal on one shared inventory, with admin.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -21,6 +21,7 @@
     "jose": "^6.2.14",
     "next": "^15.5.28",
     "pg": "^8.23.1",
+    "qrcode": "^1.5.4",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "server-only": "^0.0.1",
@@ -29,6 +30,7 @@
   "devDependencies": {
     "@types/node": "^26.6.6",
     "@types/pg": "^8.23.1",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "autoprefixer": "^10.6.2",

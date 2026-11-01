@@ -197,3 +197,47 @@ describe("shared inventory", () => {
     ).rejects.toThrow();
   });
 });
+
+describe("direct UPI payments", () => {
+  const upiOrder = () =>
+    m.orders.placeOrder({
+      channel: "RETAIL",
+      user: { id: userId, email: "t@example.com", name: "T" },
+      company: null,
+      priceList: null,
+      items: [{ v: v1kg, q: 1 }],
+      address: addr,
+      paymentMethod: "UPI",
+    });
+
+  it("needs a store UPI ID, holds shipping until staff verify, and refuses a reused reference", async () => {
+    const { db } = m.db;
+    const { eq } = m.orm;
+    await db.transaction((tx) => m.inv.receiveStock(tx, { itemId, qty: 3000, lotNo: "L-UPI", expiresOn: new Date(Date.now() + 100 * 86400000), actor: "test" }));
+
+    await expect(upiOrder()).rejects.toThrow(/UPI payments aren't set up/);
+    await db.update(m.s.settings).set({ upiId: "nutbox@okhdfcbank" });
+    const a = await upiOrder();
+    const b = await upiOrder();
+
+    await expect(m.orders.shipOrder(a.id, "test", "", "")).rejects.toThrow(/record the payment/);
+    await expect(m.orders.reportUpiPayment(a.id, "someone-else", "431298765012")).rejects.toThrow(/not found/);
+    await m.orders.reportUpiPayment(a.id, userId, "431298765012");
+    await expect(m.orders.reportUpiPayment(b.id, userId, "431298765012")).rejects.toThrow(/already been used/);
+
+    // Reporting alone doesn't make it paid.
+    let [row] = await db.select().from(m.s.orders).where(eq(m.s.orders.id, a.id));
+    expect(row.paymentStatus).toBe("PENDING");
+    expect(row.upiRef).toBe("431298765012");
+
+    await m.orders.markPaid(a.id, "staff");
+    [row] = await db.select().from(m.s.orders).where(eq(m.s.orders.id, a.id));
+    expect(row.paymentStatus).toBe("PAID");
+    const events = await db.select().from(m.s.orderEvents).where(eq(m.s.orderEvents.orderId, a.id));
+    expect(events.find((e) => e.type === "paid")?.message).toContain("431298765012");
+    await expect(m.orders.reportUpiPayment(a.id, userId, "431298765013")).rejects.toThrow(/isn't awaiting payment/);
+
+    await m.orders.shipOrder(a.id, "test", "", "");
+    await m.orders.cancelOrder(b.id, "test", "unpaid");
+  });
+});

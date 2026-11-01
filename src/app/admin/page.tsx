@@ -35,7 +35,8 @@ export default async function Dashboard() {
     db
       .select({
         toShip: sql<number>`count(*) filter (where ${orders.status} = 'OPEN' and ${orders.fulfillmentStatus} = 'UNFULFILLED')::int`,
-        awaitingPay: sql<number>`count(*) filter (where ${orders.status} = 'OPEN' and ${orders.paymentStatus} = 'PENDING' and ${orders.paymentMethod} in ('RAZORPAY','BANK_TRANSFER'))::int`,
+        awaitingPay: sql<number>`count(*) filter (where ${orders.status} = 'OPEN' and ${orders.paymentStatus} = 'PENDING' and ${orders.paymentMethod} in ('RAZORPAY','BANK_TRANSFER','UPI'))::int`,
+        upiToVerify: sql<number>`count(*) filter (where ${orders.status} = 'OPEN' and ${orders.paymentStatus} = 'PENDING' and ${orders.paymentMethod} = 'UPI' and ${orders.upiRef} is not null)::int`,
         quotes: sql<number>`count(*) filter (where ${orders.status} = 'QUOTE')::int`,
       })
       .from(orders),
@@ -112,6 +113,7 @@ export default async function Dashboard() {
           <h2 className="px-5 py-3 font-semibold">Needs action</h2>
           {[
             { n: counts.toShip, label: "orders to pack and ship", href: "/admin/orders?view=unfulfilled" },
+            { n: counts.upiToVerify, label: "UPI payments to verify", href: "/admin/orders?view=upi" },
             { n: counts.awaitingPay, label: "prepaid orders awaiting payment", href: "/admin/orders?view=unpaid" },
             { n: counts.quotes, label: "wholesale quotes to review", href: "/admin/orders?view=quotes" },
             { n: applications.length, label: "wholesale applications", href: "/admin/companies?status=PENDING" },

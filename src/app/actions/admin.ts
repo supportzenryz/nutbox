@@ -24,6 +24,7 @@ import { validateGstin } from "@/lib/gstin";
 import { adjustLot, InventoryError, receiveStock } from "@/lib/inventory";
 import { approveQuote, archiveOrder, cancelOrder, markDelivered, markPaid, markReturned, shipOrder } from "@/lib/orders";
 import { STATES } from "@/lib/states";
+import { UPI_ID_RE } from "@/lib/upi";
 
 const who = (u: { email: string }) => u.email;
 
@@ -335,6 +336,8 @@ export async function settingsAction(fd: FormData) {
     if (!(stateCode in STATES)) throw new InventoryError("Choose the warehouse state.");
     if (g.stateCode !== stateCode) throw new InventoryError("The store GSTIN must belong to the warehouse state.");
     if (!/^\d{14}$/.test(str(fd, "fssaiLicence"))) throw new InventoryError("FSSAI licence numbers have 14 digits.");
+    const upiId = str(fd, "upiId").trim();
+    if (upiId && !UPI_ID_RE.test(upiId)) throw new InventoryError("Check the UPI ID — it looks like name@bank, e.g. nutbox@okhdfcbank.");
     const money = (k: string) => {
       const v = paise(fd, k);
       if (!Number.isFinite(v) || v < 0) throw new InventoryError("Check the amounts — they must be zero or more.");
@@ -359,6 +362,8 @@ export async function settingsAction(fd: FormData) {
         wholesaleFreightPerKgPaise: money("wholesaleFreightPerKg"),
         wholesaleMinOrderPaise: money("wholesaleMinOrder"),
         bankDetails: str(fd, "bankDetails"),
+        upiId,
+        upiPayeeName: str(fd, "upiPayeeName").trim().slice(0, 50),
       })
       .where(eq(settings.id, 1));
     await db.update(locations).set({ stateCode }).where(eq(locations.isDefault, true));

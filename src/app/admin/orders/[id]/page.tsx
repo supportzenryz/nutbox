@@ -9,6 +9,7 @@ import { db } from "@/db";
 import { inventoryItems, lots, stockMovements } from "@/db/schema";
 import { dateIN, orderNo, rupees2, weight } from "@/lib/format";
 import { getOrderFull } from "@/lib/order-view";
+import { isPrepaid } from "@/lib/orders";
 import { stateName } from "@/lib/states";
 import { needsEwayBill } from "@/lib/tax";
 
@@ -39,7 +40,7 @@ export default async function AdminOrder({ params, searchParams }: { params: Pro
   const isQuote = o.status === "QUOTE";
   const open = o.status === "OPEN";
   const unshipped = o.fulfillmentStatus === "UNFULFILLED";
-  const prepaid = o.paymentMethod === "RAZORPAY" || o.paymentMethod === "BANK_TRANSFER";
+  const prepaid = isPrepaid(o.paymentMethod);
   const eway = needsEwayBill(o.totalPaise, o.supplyType);
 
   return (
@@ -118,6 +119,16 @@ export default async function AdminOrder({ params, searchParams }: { params: Pro
             <div className="panel p-4 text-sm">
               <p className="font-semibold">Payment</p>
               <p className="mt-1 text-muted">{PAYMENT_METHOD_LABEL[o.paymentMethod]}{o.razorpayPaymentId ? ` · ${o.razorpayPaymentId}` : ""}</p>
+              {o.paymentMethod === "UPI" && o.paymentStatus === "PENDING" && open && (
+                o.upiRef ? (
+                  <p className="mt-2 rounded bg-saffron-soft p-2">
+                    Customer says paid · UPI ref <b className="num">{o.upiRef}</b>{o.paymentReportedAt ? ` · ${dateIN(o.paymentReportedAt, true)}` : ""}.
+                    <span className="block text-xs text-muted">Find this reference for {rupees2(o.totalPaise)} in your bank or UPI business app before recording payment. Screenshots can be faked.</span>
+                  </p>
+                ) : (
+                  <p className="mt-2 text-xs text-muted">Waiting for the customer to pay and enter their UPI reference.</p>
+                )
+              )}
               {o.dueDate && <p className="mt-1">Due {dateIN(o.dueDate)}{o.paymentStatus === "PENDING" && o.dueDate < new Date() ? <span className="ml-1 font-semibold text-danger">overdue</span> : null}</p>}
               <p className="mt-3 font-semibold">Fulfilment</p>
               <p className="mt-1 text-muted">
@@ -167,7 +178,7 @@ export default async function AdminOrder({ params, searchParams }: { params: Pro
             {open && o.paymentStatus === "PENDING" && (o.paymentMethod !== "COD" || o.fulfillmentStatus !== "UNFULFILLED") && (
               <Act id={o.id} op="paid" label="Record payment" tone={prepaid && unshipped ? "primary" : "ghost"}>
                 <label htmlFor="ref" className="label">Reference</label>
-                <input id="ref" name="reference" className="field" placeholder="UTR / UPI ref / cheque no." />
+                <input id="ref" name="reference" defaultValue={o.upiRef ?? undefined} className="field" placeholder="UTR / UPI ref / cheque no." />
               </Act>
             )}
             {open && unshipped && (!prepaid || o.paymentStatus === "PAID") && (

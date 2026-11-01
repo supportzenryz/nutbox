@@ -26,7 +26,11 @@ export default async function Checkout({ searchParams }: { searchParams: Promise
   const sum = await buildCheckout(db, { channel: "RETAIL", items, couponCode: await readCoupon("RETAIL"), shipStateCode: stateCode });
   if (sum.problems.length) redirect("/cart");
   const codOk = sum.tax.totalPaise <= sum.settings.codLimitPaise;
-  const online = razorpayEnabled() || demoPaymentsEnabled();
+  // Gateway keys win; otherwise direct UPI to the store's UPI ID; otherwise (dev only) demo payments.
+  const gateway = razorpayEnabled();
+  const directUpi = !gateway && Boolean(sum.settings.upiId);
+  const demo = !gateway && !directUpi && demoPaymentsEnabled();
+  const online = gateway || directUpi || demo;
 
   return (
     <div className="shell py-8">
@@ -50,11 +54,15 @@ export default async function Checkout({ searchParams }: { searchParams: Promise
             <div className="mt-3 space-y-2">
               {online && (
                 <label className="panel flex cursor-pointer items-start gap-3 p-4 has-[:checked]:border-pista">
-                  <input type="radio" name="paymentMethod" value="RAZORPAY" defaultChecked className="mt-1 accent-pista" />
+                  <input type="radio" name="paymentMethod" value={directUpi ? "UPI" : "RAZORPAY"} defaultChecked className="mt-1 accent-pista" />
                   <span>
-                    <span className="font-medium">UPI, card or netbanking</span>
+                    <span className="font-medium">UPI</span>
                     <span className="block text-sm text-muted">
-                      {razorpayEnabled() ? "Secure payment by Razorpay on the next screen." : "Demo mode: no gateway keys set, so you'll confirm a simulated payment."}
+                      {gateway
+                        ? "Google Pay, PhonePe, Paytm or any UPI app. Secure payment by Razorpay on the next screen."
+                        : directUpi
+                          ? "Google Pay, PhonePe, Paytm or any UPI app. On the next screen, tap Pay to open your UPI app, or scan the QR code."
+                          : "Demo mode: no payment set up, so you'll confirm a simulated payment."}
                     </span>
                   </span>
                 </label>

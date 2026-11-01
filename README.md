@@ -11,7 +11,7 @@ The core idea: loose stock is counted in grams. 300 kg of W240 cashews is one po
 
 | Area | Features |
 |---|---|
-| **Retail store** | Rate board home, filters by aisle / grade / country of origin (Legal Metrology 6(10A)), pack-size PDP with ₹/kg, MRP, FSSAI + nutrition block, cart, coupons, free-delivery threshold, COD (capped) or Razorpay, GST-inclusive pricing, order tracking, printable tax invoice |
+| **Retail store** | Rate board home, filters by aisle / grade / country of origin (Legal Metrology 6(10A)), pack-size PDP with ₹/kg, MRP, FSSAI + nutrition block, cart, coupons, free-delivery threshold, COD (capped), direct UPI (opens the shopper's UPI apps / QR, staff verify the UTR — no gateway needed) or Razorpay restricted to UPI, GST-inclusive pricing, order tracking, printable tax invoice |
 | **Wholesale portal** | GSTIN application (format + mod-36 checksum + state match), admin approval, quick-order sheet with price ladders, MOQ & step rules, tier price lists with volume breaks, GST-exclusive pricing, freight per kg, **request a quote** or order on credit (Net 7/15/30 with credit limit) or bank transfer |
 | **Shared inventory** | Gram pools with lots & best-before dates, row-locked reservations (no overselling), FEFO picking at shipment, receive / count / wastage, return-to-origin restocks exact lots, immutable ledger, low-stock & near-expiry alerts, combos drawing from several pools |
 | **Admin** | Dashboard (sales by channel, needs-action queue), orders & quotes (negotiate prices, approve, record payment, ship + invoice, deliver, cancel, RTO), products & pack sizes, inventory, wholesale accounts, price lists, discount codes, GSTR-1 report + CSV, settings, staff vs admin roles |

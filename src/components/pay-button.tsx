@@ -21,7 +21,16 @@ function loadScript(): Promise<boolean> {
   });
 }
 
-export function PayButton({ orderId, label }: { orderId: string; label: string }) {
+// Razorpay Checkout showing only UPI (apps, QR, UPI ID). Wholesale keeps every method: UPI caps most payments at ₹1 lakh.
+const UPI_ONLY_CONFIG = {
+  display: {
+    blocks: { upi: { name: "Pay by UPI", instruments: [{ method: "upi" }] } },
+    sequence: ["block.upi"],
+    preferences: { show_default_blocks: false },
+  },
+};
+
+export function PayButton({ orderId, label, upiOnly = false }: { orderId: string; label: string; upiOnly?: boolean }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +55,7 @@ export function PayButton({ orderId, label }: { orderId: string; label: string }
         name: "Nutbox",
         prefill: { email: r.email, contact: r.phone, name: r.name },
         theme: { color: "#1E4A37" },
+        ...(upiOnly ? { config: UPI_ONLY_CONFIG } : {}),
         handler: async (resp: { razorpay_payment_id: string; razorpay_signature: string }) => {
           const v = await verifyPaymentAction(orderId, resp.razorpay_payment_id, resp.razorpay_signature);
           if ("error" in v && v.error) setError(v.error);

@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, inArray, or, type SQL } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, isNotNull, or, type SQL } from "drizzle-orm";
 import Link from "next/link";
 import { Empty, PageHead } from "@/components/admin-ui";
 import { PAYMENT_METHOD_LABEL, Status } from "@/components/status";
@@ -12,6 +12,7 @@ const VIEWS: { key: string; label: string; where?: SQL }[] = [
   { key: "", label: "All" },
   { key: "unfulfilled", label: "To ship", where: and(eq(orders.status, "OPEN"), eq(orders.fulfillmentStatus, "UNFULFILLED")) },
   { key: "unpaid", label: "Unpaid", where: and(eq(orders.status, "OPEN"), eq(orders.paymentStatus, "PENDING")) },
+  { key: "upi", label: "UPI to verify", where: and(eq(orders.status, "OPEN"), eq(orders.paymentStatus, "PENDING"), eq(orders.paymentMethod, "UPI"), isNotNull(orders.upiRef)) },
   { key: "quotes", label: "Quotes", where: eq(orders.status, "QUOTE") },
   { key: "shipped", label: "In transit", where: eq(orders.fulfillmentStatus, "SHIPPED") },
   { key: "closed", label: "Cancelled & returned", where: or(eq(orders.status, "CANCELLED"), eq(orders.fulfillmentStatus, "RETURNED")) },
@@ -69,7 +70,7 @@ export default async function Orders({ searchParams }: { searchParams: Promise<{
                   <td><Status value={o.channel} /></td>
                   <td>
                     {o.status === "QUOTE" ? <Status value="QUOTE" /> : <Status value={o.paymentStatus} />}
-                    <span className="block text-xs text-muted">{PAYMENT_METHOD_LABEL[o.paymentMethod]}</span>
+                    <span className="block text-xs text-muted">{PAYMENT_METHOD_LABEL[o.paymentMethod]}{o.upiRef && o.paymentStatus === "PENDING" ? ` · ref ${o.upiRef}` : ""}</span>
                   </td>
                   <td>{o.status === "CANCELLED" ? <Status value="CANCELLED" /> : <Status value={o.fulfillmentStatus} />}</td>
                   <td className="num text-right">{weight(o.totalGrams)}</td>

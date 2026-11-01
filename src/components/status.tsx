@@ -47,4 +47,5 @@ export const PAYMENT_METHOD_LABEL: Record<string, string> = {
   RAZORPAY: "UPI / card (Razorpay)",
   BANK_TRANSFER: "Bank transfer (NEFT/RTGS)",
   NET_TERMS: "Credit terms",
+  UPI: "UPI (direct to store)",
 };

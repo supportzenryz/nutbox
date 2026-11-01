@@ -253,7 +253,8 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ id: string; 
     let method = input.paymentMethod;
     let dueDate: Date | null = null;
     if (channel === "RETAIL") {
-      if (method !== "COD" && method !== "RAZORPAY") problems.push("Choose UPI/card or cash on delivery.");
+      if (method !== "COD" && method !== "RAZORPAY" && method !== "UPI") problems.push("Choose UPI or cash on delivery.");
+      if (method === "UPI" && !s.upiId) problems.push("UPI payments aren't set up yet. Choose another payment method.");
       if (method === "COD" && sum.tax.totalPaise > s.codLimitPaise)
         problems.push(`Cash on delivery is available up to ₹${(s.codLimitPaise / 100).toLocaleString("en-IN")}. Pay online for larger orders.`);
     } else {
@@ -351,6 +352,10 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ id: string; 
 
 // ───────────────────────── Lifecycle (admin) ─────────────────────────
 
+/** Methods paid before dispatch: the order can't ship until the payment is recorded. */
+export const PREPAID_METHODS: readonly PaymentMethod[] = ["RAZORPAY", "BANK_TRANSFER", "UPI"];
+export const isPrepaid = (m: PaymentMethod) => PREPAID_METHODS.includes(m);
+
 export class TransitionError extends Error {
   constructor(message: string) {
     super(message);
@@ -416,8 +421,9 @@ export async function markPaid(orderId: string, actor: string, reference?: strin
     const o = await lockOrder(tx, orderId);
     if (o.status !== "OPEN") throw new TransitionError("Only open orders can be marked paid.");
     if (o.paymentStatus !== "PENDING") throw new TransitionError("This order isn't awaiting payment.");
+    const ref = reference || o.upiRef;
     await tx.update(orders).set({ paymentStatus: "PAID" }).where(eq(orders.id, orderId));
-    await addEvent(tx, orderId, "paid", reference ? `Payment recorded (${reference}).` : "Payment recorded.", actor);
+    await addEvent(tx, orderId, "paid", ref ? `Payment recorded (${ref}).` : "Payment recorded.", actor);
   });
 }
 
@@ -435,7 +441,7 @@ export async function shipOrder(orderId: string, actor: string, courier: string,
   return db.transaction(async (tx) => {
     const o = await lockOrder(tx, orderId);
     if (o.status !== "OPEN" || o.fulfillmentStatus !== "UNFULFILLED") throw new TransitionError("Only open, unfulfilled orders can be shipped.");
-    if ((o.paymentMethod === "RAZORPAY" || o.paymentMethod === "BANK_TRANSFER") && o.paymentStatus !== "PAID")
+    if (isPrepaid(o.paymentMethod) && o.paymentStatus !== "PAID")
       throw new TransitionError("Prepaid order — record the payment before shipping.");
     const s = await getSettings(tx);
     const now = new Date();
@@ -507,5 +513,30 @@ export async function recordOnlinePayment(orderId: string, paymentId: string, ac
     if (o.status !== "OPEN") throw new TransitionError("Order is not open.");
     await tx.update(orders).set({ paymentStatus: "PAID", razorpayPaymentId: paymentId }).where(eq(orders.id, orderId));
     await addEvent(tx, orderId, "paid", `Online payment received (${paymentId}).`, actor);
+  });
+}
+
+/**
+ * Direct UPI: the shopper says they've paid and gives the 12-digit UPI reference.
+ * This does NOT mark the order paid — staff check the money arrived, then "Record payment".
+ * The reference is unique across orders, so one payment can't be claimed twice.
+ */
+export async function reportUpiPayment(orderId: string, userId: string, upiRef: string) {
+  return db.transaction(async (tx) => {
+    const o = await lockOrder(tx, orderId);
+    if (o.userId !== userId) throw new TransitionError("Order not found.");
+    if (o.paymentMethod !== "UPI") throw new TransitionError("This order isn't paid by UPI.");
+    if (o.status !== "OPEN" || o.paymentStatus !== "PENDING") throw new TransitionError("This order isn't awaiting payment.");
+    if (o.upiRef === upiRef) return;
+    const [clash] = await tx.select({ id: orders.id }).from(orders).where(eq(orders.upiRef, upiRef));
+    if (clash) throw new TransitionError("That UPI reference has already been used for another order. Check the number in your UPI app.");
+    await tx.update(orders).set({ upiRef, paymentReportedAt: new Date() }).where(eq(orders.id, orderId));
+    await addEvent(
+      tx,
+      orderId,
+      "payment_reported",
+      `${o.upiRef ? "Customer corrected" : "Customer reported"} UPI payment, reference ${upiRef}. Check it arrived before recording payment.`,
+      o.email,
+    );
   });
 }

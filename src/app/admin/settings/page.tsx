@@ -55,11 +55,29 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <F name="wholesaleFreightPerKg" label="Freight per kg (₹)" d={(s.wholesaleFreightPerKgPaise / 100).toFixed(2)} />
           <F name="bankDetails" label="Bank details for transfers" d={s.bankDetails} wide />
         </section>
+        <section className="panel grid gap-4 p-5 text-sm sm:grid-cols-2">
+          <h2 className="font-semibold sm:col-span-2">UPI payments</h2>
+          <div>
+            <label htmlFor="upiId" className="label">Business UPI ID</label>
+            <input id="upiId" name="upiId" defaultValue={s.upiId} className="field num" placeholder="nutbox@okhdfcbank" autoComplete="off" />
+            <p className="hint">Leave empty to turn direct UPI off.</p>
+          </div>
+          <div>
+            <label htmlFor="upiPayeeName" className="label">Name shown in UPI apps</label>
+            <input id="upiPayeeName" name="upiPayeeName" defaultValue={s.upiPayeeName} className="field" placeholder={s.legalName} />
+            <p className="hint">Should match the name on that UPI ID&apos;s bank account.</p>
+          </div>
+          <p className="text-xs text-muted sm:col-span-2">
+            Customers tap <b>Pay</b> to open Google Pay, PhonePe, Paytm or any UPI app with the amount filled in, or scan a QR code on a computer, then enter their UPI reference.
+            You confirm each one under <b>Orders → UPI to verify</b>. Use a <b>merchant/business</b> UPI ID (PhonePe Business, Paytm for Business, Google Pay for Business or your bank&apos;s merchant QR) linked to your current account:
+            UPI apps often block or cap web payments to personal UPI IDs.
+          </p>
+        </section>
         <section className="panel p-5 text-sm">
-          <h2 className="font-semibold">Payments</h2>
+          <h2 className="font-semibold">Payment gateway</h2>
           <p className="mt-1 text-muted">
-            Razorpay: {razorpayEnabled() ? <span className="font-medium text-pista">connected</span> : "not configured"}.
-            {!razorpayEnabled() && " Set RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET and RAZORPAY_WEBHOOK_SECRET in the environment."}
+            Razorpay: {razorpayEnabled() ? <span className="font-medium text-pista">connected — retail checkout uses Razorpay (UPI only) and confirms payments automatically</span> : "not configured"}.
+            {!razorpayEnabled() && " When you add RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET and RAZORPAY_WEBHOOK_SECRET, retail checkout switches from direct UPI to Razorpay automatically."}
             {demoPaymentsEnabled() && " Demo payments are on — shoppers can confirm simulated payments."}
           </p>
         </section>

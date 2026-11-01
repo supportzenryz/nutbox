@@ -8,9 +8,10 @@ import { addresses, orders, type Channel, type PaymentMethod } from "@/db/schema
 import { currentUser, requireUser, requireWholesale } from "@/lib/auth";
 import { clearCart, readCart, readCoupon, writeCart } from "@/lib/cart";
 import { int, optStr, str, userMessage, withMsg } from "@/lib/forms";
-import { placeOrder, recordOnlinePayment } from "@/lib/orders";
+import { placeOrder, recordOnlinePayment, reportUpiPayment } from "@/lib/orders";
 import { createRazorpayOrder, demoPaymentsEnabled, razorpayEnabled, verifyPaymentSignature } from "@/lib/razorpay";
 import { STATES } from "@/lib/states";
+import { normaliseUpiRef, UPI_REF_RE } from "@/lib/upi";
 
 const cartPath = (c: Channel) => (c === "RETAIL" ? "/cart" : "/wholesale/cart");
 
@@ -89,7 +90,8 @@ export async function placeRetailOrderAction(fd: FormData) {
   const u = await requireUser("/checkout");
   const parsed = addressFrom(fd);
   if ("error" in parsed) redirect(withMsg("/checkout", { error: parsed.error! }));
-  const method: PaymentMethod = str(fd, "paymentMethod") === "COD" ? "COD" : "RAZORPAY";
+  const pm = str(fd, "paymentMethod");
+  const method: PaymentMethod = pm === "COD" ? "COD" : pm === "UPI" ? "UPI" : "RAZORPAY";
   let orderId = "";
   let error: string | undefined;
   try {
@@ -181,4 +183,20 @@ export async function demoPayAction(orderId: string) {
   const o = await ownOrder(orderId);
   await recordOnlinePayment(o.id, `pay_demo_${Date.now().toString(36)}`, o.email);
   return { ok: true };
+}
+
+/** Direct UPI: the shopper submits the 12-digit reference from their UPI app. Staff verify before it counts as paid. */
+export async function reportUpiPaymentAction(fd: FormData) {
+  const orderId = str(fd, "orderId");
+  const back = `/account/orders/${orderId}`;
+  const u = await requireUser(back);
+  const ref = normaliseUpiRef(str(fd, "upiRef"));
+  if (!UPI_REF_RE.test(ref)) redirect(withMsg(back, { error: "Enter the 12-digit UPI reference number (UTR) from your UPI app's payment receipt." }));
+  let error: string | undefined;
+  try {
+    await reportUpiPayment(orderId, u.id, ref);
+  } catch (e) {
+    error = userMessage(e);
+  }
+  redirect(withMsg(back, error ? { error } : { ok: "Thanks! We'll confirm your payment shortly and then pack your order." }));
 }
