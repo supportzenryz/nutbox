@@ -7,6 +7,12 @@ import { db, pool } from "./index";
 import * as t from "./schema";
 
 const withCs = (body: string) => body + gstinChecksum(body);
+
+// SEED_MODE=demo (default outside production): catalog + stock lots + demo accounts and orders.
+// SEED_MODE=production: catalog, prices, coupons, settings and ONE admin from SEED_ADMIN_EMAIL /
+// SEED_ADMIN_PASSWORD — no stock, no demo accounts. Receive real stock from Admin → Inventory.
+const MODE = process.env.SEED_MODE ?? (process.env.NODE_ENV === "production" ? "production" : "demo");
+const DEMO = MODE !== "production";
 const STORE_GSTIN = withCs("33AAFCN4321H1Z");
 
 type N = t.Nutrition;
@@ -395,7 +401,20 @@ const label = (g: number) => (g >= 1000 ? `${g / 1000} kg` : `${g} g`);
 const daysFromNow = (d: number) => new Date(Date.now() + d * 86_400_000);
 
 async function main() {
-  console.log("Seeding Nutbox…");
+  console.log(`Seeding Nutbox (${MODE} mode)…`);
+  // Seeding wipes every table. Never let it run over a database that has taken real orders.
+  const DEMO_EMAILS = ["priya@example.com", "orders@sksweets.in"];
+  const hasOrders = (await db.execute(sql`select to_regclass('public.orders') is not null as has`)).rows[0] as { has: boolean };
+  if (hasOrders.has && process.env.SEED_FORCE !== "1") {
+    const { n } = (await db.execute(sql`select count(*)::int as n from orders where email not in (${sql.join(DEMO_EMAILS.map((e) => sql`${e}`), sql`, `)})`)).rows[0] as { n: number };
+    if (n > 0) throw new Error(`Refusing to seed: this database has ${n} real order(s) and seeding would erase them. Set SEED_FORCE=1 only if you really mean to wipe it.`);
+  }
+  if (!DEMO) {
+    const email = process.env.SEED_ADMIN_EMAIL ?? "";
+    const pw = process.env.SEED_ADMIN_PASSWORD ?? "";
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || pw.length < 12)
+      throw new Error("Production seed needs SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD (12+ characters).");
+  }
   await db.execute(sql`TRUNCATE TABLE order_events, order_lines, orders, reservations, stock_movements, lots, inventory_levels,
     variant_components, price_breaks, variants, inventory_items, products, categories, addresses, users, companies, price_lists,
     coupons, settings, invoice_counters, locations RESTART IDENTITY CASCADE`);
@@ -521,7 +540,7 @@ async function main() {
     }
 
     let onHand = 0;
-    for (const lot of s.stock) {
+    for (const lot of DEMO ? s.stock : []) {
       const qty = lot.kg * 1000;
       onHand += qty;
       const [l] = await db
@@ -605,6 +624,13 @@ async function main() {
 
   // Accounts
   const hash = (pw: string) => bcrypt.hash(pw, 10);
+  if (!DEMO) {
+    await db.insert(t.users).values({ email: process.env.SEED_ADMIN_EMAIL!.toLowerCase(), name: "Store Admin", passwordHash: await hash(process.env.SEED_ADMIN_PASSWORD!), role: "ADMIN" });
+    console.log(`✓ ${SPECS.length + 1} products, ${Object.keys(variantBySku).length} variants, no stock (receive it in Admin → Inventory)`);
+    console.log(`  admin: ${process.env.SEED_ADMIN_EMAIL} — update GSTIN, FSSAI, address and bank details in Admin → Settings before taking orders`);
+    await pool.end();
+    return;
+  }
   await db.insert(t.users).values({ email: "admin@nutbox.in", name: "Store Admin", passwordHash: await hash("admin123"), role: "ADMIN" });
   await db.insert(t.users).values({ email: "packing@nutbox.in", name: "Ravi (Packing)", passwordHash: await hash("staff123"), role: "STAFF" });
   const [priya] = await db

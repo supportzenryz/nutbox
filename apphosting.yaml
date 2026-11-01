@@ -1,0 +1,46 @@
+# Firebase App Hosting — https://firebase.google.com/docs/app-hosting/configure
+# Every push to the live branch (main) builds and rolls out automatically.
+
+runConfig:
+  minInstances: 0        # scale to zero when idle; set to 1 to avoid cold starts once you have traffic
+  maxInstances: 4
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 1024
+
+env:
+  # Secrets live in Cloud Secret Manager. Create them once:
+  #   firebase apphosting:secrets:set nutbox-database-url   (Neon *pooled* connection string, ?sslmode=require)
+  #   firebase apphosting:secrets:set nutbox-auth-secret    (openssl rand -hex 32)
+  - variable: DATABASE_URL
+    secret: nutbox-database-url
+    availability:
+      - RUNTIME
+  - variable: AUTH_SECRET
+    secret: nutbox-auth-secret
+    availability:
+      - RUNTIME
+
+  # Keep per-instance pools small: 4 instances × 5 = 20 connections, well inside Neon's pooler.
+  - variable: DB_POOL_MAX
+    value: "5"
+    availability:
+      - RUNTIME
+
+  # Your public domain(s), comma-separated, so Server Actions accept form posts from them.
+  - variable: SERVER_ACTIONS_ALLOWED_ORIGINS
+    value: "nutbox.in,www.nutbox.in"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Razorpay — uncomment after creating these secrets. Until then checkout offers COD only.
+  # - variable: RAZORPAY_KEY_ID
+  #   secret: nutbox-razorpay-key-id
+  #   availability: [RUNTIME]
+  # - variable: RAZORPAY_KEY_SECRET
+  #   secret: nutbox-razorpay-key-secret
+  #   availability: [RUNTIME]
+  # - variable: RAZORPAY_WEBHOOK_SECRET
+  #   secret: nutbox-razorpay-webhook-secret
+  #   availability: [RUNTIME]

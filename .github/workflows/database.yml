@@ -1,0 +1,41 @@
+name: Database (Neon)
+
+# Applies migrations to the production database whenever a migration lands on main,
+# and on demand. Seeding is manual only and refuses to wipe a database with real orders.
+on:
+  push:
+    branches: [main]
+    paths: ["drizzle/**"]
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: "Also seed the catalog and create the admin (first deploy only)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: production-database
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Apply migrations
+        run: npm run db:migrate
+      - name: Seed catalog and admin
+        if: ${{ inputs.seed }}
+        env:
+          SEED_MODE: production
+          SEED_ADMIN_EMAIL: ${{ secrets.SEED_ADMIN_EMAIL }}
+          SEED_ADMIN_PASSWORD: ${{ secrets.SEED_ADMIN_PASSWORD }}
+        run: npm run db:seed

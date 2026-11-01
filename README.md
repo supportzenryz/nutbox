@@ -44,6 +44,14 @@ Demo accounts (seeded):
 
 Without Razorpay keys, online payment runs in **demo mode** (a "confirm demo payment" step). It's disabled in production unless `PAYMENTS_DEMO=1`.
 
+## Deploy
+
+Firebase App Hosting (app) + Neon (PostgreSQL) + Cloudflare (DNS/domain). Step-by-step: [`docs/DEPLOY.md`](docs/DEPLOY.md).
+
+- `apphosting.yaml` — App Hosting runtime size and secret wiring
+- `.github/workflows/database.yml` — runs migrations on Neon (and the one-time production seed)
+- `SEED_MODE=production npm run db:seed` loads catalog + one admin (`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`), no stock and no demo accounts; it refuses to run over a database with real orders
+
 ## Tests
 
 ```bash
@@ -54,10 +62,10 @@ The integration suite creates `nutbox_test` and checks, among other things, that
 
 ## Going live checklist
 
+- [ ] Follow [`docs/DEPLOY.md`](docs/DEPLOY.md)
 - [ ] Real GSTIN, FSSAI licence, legal name, address and bank details in **Admin → Settings** (seed values are placeholders)
 - [ ] `AUTH_SECRET` (32+ random chars), Razorpay keys and webhook secret → point the webhook at `/api/razorpay/webhook`
 - [ ] Verify HSN codes and GST rates with your CA (makhana and gift hampers in particular)
-- [ ] Change all demo passwords / delete demo accounts
 - [ ] Add: login rate-limiting, password reset, order emails/WhatsApp, Shiprocket/Delhivery integration, GSTIN live-verification API, e-invoice (IRN) once AATO > ₹5 cr
 
 ## Working on this repo with gstack
