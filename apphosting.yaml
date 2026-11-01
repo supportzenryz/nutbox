@@ -29,7 +29,7 @@ env:
 
   # Your public domain(s), comma-separated, so Server Actions accept form posts from them.
   - variable: SERVER_ACTIONS_ALLOWED_ORIGINS
-    value: "nutbox.in,www.nutbox.in"
+    value: "nutbox.online,www.nutbox.online"
     availability:
       - BUILD
       - RUNTIME
