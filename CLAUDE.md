@@ -8,6 +8,10 @@
 - Order status changes happen inside a transaction after `lockOrder` (FOR UPDATE).
 - Run `npm test && npx tsc --noEmit` before committing. The integration tests need a local Postgres.
 
+## Neon
+
+Neon's agent skills are installed in `.claude/skills/` (pinned in `skills-lock.json`; refresh with `npx neon skills update -y`). Use `neon-postgres` for database work. The app uses the **pooled** `DATABASE_URL`; migrations use the **direct** URL. Production database: Neon `aws-ap-southeast-1` (Singapore).
+
 ## gstack
 
 Use gstack for AI-assisted work on this repo: `/office-hours` to frame a feature, `/plan-eng-review` before building, `/review` and `/cso` before merging, `/qa` against a running instance, `/ship` to open the PR.

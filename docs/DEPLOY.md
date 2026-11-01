@@ -16,11 +16,11 @@
 
 ## 1. Neon (database) — 10 minutes
 
-1. Create a project at neon.tech. Pick the region closest to the App Hosting region you'll choose in step 3 (same cloud region family keeps queries fast).
+1. Create a project at neon.tech in **AWS Asia Pacific (Singapore) — `aws-ap-southeast-1`**. Neon has no India region; Singapore is closest, and step 3 puts the app in Singapore too so every query stays in-region. The region can't be changed later.
 2. From **Connection details** copy two strings:
    - **Pooled** (host contains `-pooler`) → used by the app.
    - **Direct** (no `-pooler`) → used for migrations.
-   Both end in `?sslmode=require`.
+   Both end in `?sslmode=require`. The pooled one goes through PgBouncer in transaction mode: fine for this app (its row locks live inside transactions, and it uses no `SET`, `LISTEN` or named prepared statements), but migrations must use the direct one.
 
 ## 2. GitHub (migrations + first seed) — 5 minutes
 
@@ -39,7 +39,7 @@ Then **Actions → Database (Neon) → Run workflow → tick "seed"**. It create
 Needs the **Blaze** (pay-as-you-go) plan; App Hosting has a monthly no-cost allowance before charges.
 
 1. console.firebase.google.com → create project `nutbox` → upgrade to Blaze.
-2. **Build → App Hosting → Get started**: connect GitHub, choose `supportzenryz/nutbox`, root directory `/`, live branch `main`, automatic rollouts **on**. Choose the region nearest India the console offers. Name the backend `nutbox`.
+2. **Build → App Hosting → Get started**: connect GitHub, choose `supportzenryz/nutbox`, root directory `/`, live branch `main`, automatic rollouts **on**. Choose **asia-southeast1 (Singapore)** if offered — next to the Neon database — otherwise the nearest Asian region. Name the backend `nutbox`.
 3. Create the two secrets from a terminal with the Firebase CLI (`npm i -g firebase-tools && firebase login`):
    ```bash
    firebase use <your-project-id>
